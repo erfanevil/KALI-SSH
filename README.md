@@ -4,7 +4,8 @@
     <b>Automated, One-Click SSH Bridge from Windows to VMware Kali Linux</b>
   </p>
   <p align="center">
-    <img src="https://img.shields.io/badge/Owner-ENC-brightgreen.svg" alt="Owner: ENC">
+    <img src="https://img.shields.io/badge/Developer-EncDev-brightgreen.svg" alt="Developer: EncDev">
+    <img src="https://img.shields.io/badge/Owner-ENC-blue.svg" alt="Owner: ENC">
     <a href="https://t.me/jc_org"><img src="https://img.shields.io/badge/Telegram-@jc__org-blue.svg?logo=telegram" alt="Telegram"></a>
     <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20VMware-blueviolet.svg" alt="Platform">
     <img src="https://img.shields.io/badge/Shell-PowerShell%20%7C%20Bash-informational.svg" alt="Shell">
@@ -148,7 +149,8 @@ flowchart TD
 
 ## 👤 Author & Credits
 
-- **Owner & Creator:** **ENC**
+- **Developer:** **EncDev** ([@encdev](https://github.com/erfanevil))
+- **Brand / Owner:** **ENC**
 - **Telegram Channel & Support:** [@jc_org](https://t.me/jc_org)
 
 ---

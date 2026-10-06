@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     KALI-SSH - Automated VMware to Kali Linux SSH Bridge
-    Author: ENC
+    Developer: EncDev (ENC)
     Telegram: https://t.me/jc_org
 #>
 

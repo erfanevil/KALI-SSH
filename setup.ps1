@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     KALI-SSH One-Click Setup & Key Exchange
-    Author: ENC (Telegram: https://t.me/jc_org)
+    Developer: EncDev (ENC) (Telegram: https://t.me/jc_org)
 #>
 
 $Host.UI.RawUI.WindowTitle = "KALI-SSH Setup"
