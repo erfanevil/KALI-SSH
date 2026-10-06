@@ -1,0 +1,11 @@
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# SSH keys & secrets (never commit keys)
+*.key
+*.pem
+id_rsa
+id_ed25519
+known_hosts

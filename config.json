@@ -1,0 +1,9 @@
+{
+  "vmx_path": "C:\\linux\\kali.vmx",
+  "vmware_path": "C:\\Program Files\\VMware\\VMware Workstation\\vmrun.exe",
+  "guest_username": "enc",
+  "guest_password": "qaz",
+  "fallback_ip": "192.168.1.85",
+  "auto_start_vm": true,
+  "ssh_port": 22
+}
