@@ -23,41 +23,105 @@ Write-Host "            Kali Linux Auto-Connector & SSH Bridge" -ForegroundColor
 Write-Host " ======================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Default parameters
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $configFile = Join-Path $scriptDir "config.json"
 
-$vmrun = "C:\Program Files\VMware\VMware Workstation\vmrun.exe"
-$vmx = "C:\linux\kali.vmx"
-$user = "enc"
-$pass = "qaz"
-$fallbackIP = "192.168.1.85"
+# Default VMware executable path detection
+$defaultVmrun = "C:\Program Files\VMware\VMware Workstation\vmrun.exe"
+if (-not (Test-Path $defaultVmrun)) {
+    $altVmrun = "C:\Program Files (x86)\VMware\VMware Workstation\vmrun.exe"
+    if (Test-Path $altVmrun) { $defaultVmrun = $altVmrun }
+}
 
+$vmrun = $defaultVmrun
+$vmx = ""
+$user = ""
+$pass = ""
+$fallbackIP = "192.168.1.100"
+
+# Read existing configuration if available
+$configData = $null
 if (Test-Path $configFile) {
     try {
-        $cfg = Get-Content $configFile -Raw | ConvertFrom-Json
-        if ($cfg.vmware_path) { $vmrun = $cfg.vmware_path }
-        if ($cfg.vmx_path) { $vmx = $cfg.vmx_path }
-        if ($cfg.guest_username) { $user = $cfg.guest_username }
-        if ($cfg.guest_password) { $pass = $cfg.guest_password }
-        if ($cfg.fallback_ip) { $fallbackIP = $cfg.fallback_ip }
+        $configData = Get-Content $configFile -Raw | ConvertFrom-Json
+        if ($configData.vmware_path -and (Test-Path $configData.vmware_path)) { $vmrun = $configData.vmware_path }
+        if ($configData.vmx_path -and $configData.vmx_path -notmatch "path\\to\\your" -and (Test-Path $configData.vmx_path)) { $vmx = $configData.vmx_path }
+        if ($configData.guest_username -and $configData.guest_username -notmatch "your_username") { $user = $configData.guest_username }
+        if ($configData.guest_password -and $configData.guest_password -notmatch "your_password") { $pass = $configData.guest_password }
+        if ($configData.fallback_ip -and $configData.fallback_ip -notmatch "192.168.x") { $fallbackIP = $configData.fallback_ip }
     } catch {
-        Write-Host " [!] Warning: Could not parse config.json, using defaults." -ForegroundColor DarkYellow
+        Write-Host " [!] Warning: Error parsing config.json." -ForegroundColor DarkYellow
     }
 }
 
+# Prompt for VMware executable if not found
 if (-not (Test-Path $vmrun)) {
-    Write-Host " [!] Error: VMware vmrun.exe not found at: $vmrun" -ForegroundColor Red
-    Pause
-    Exit 1
+    Write-Host " [?] VMware 'vmrun.exe' not found automatically." -ForegroundColor Yellow
+    $vmrun = Read-Host " [*] Enter full path to vmrun.exe"
+    while (-not (Test-Path $vmrun)) {
+        Write-Host " [!] Path not found, please try again." -ForegroundColor Red
+        $vmrun = Read-Host " [*] Enter full path to vmrun.exe"
+    }
 }
 
-if (-not (Test-Path $vmx)) {
-    Write-Host " [!] Error: VM image file not found at: $vmx" -ForegroundColor Red
-    Pause
-    Exit 1
+# Prompt for VMX file path if not set or invalid
+if (-not $vmx -or (-not (Test-Path $vmx))) {
+    Write-Host ""
+    Write-Host " [?] Kali Linux .vmx path is required." -ForegroundColor Yellow
+    
+    # Try searching for a default Kali VMX
+    $suggestedVMX = Get-ChildItem -Path "$env:USERPROFILE\Documents\Virtual Machines", "C:\linux", "D:\", "E:\" -Filter "*.vmx" -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    if ($suggestedVMX) {
+        Write-Host " [*] Detected candidate: $suggestedVMX" -ForegroundColor Gray
+        $inputVMX = Read-Host " [*] Press Enter to accept candidate, or type full path"
+        if ([string]::IsNullOrWhiteSpace($inputVMX)) {
+            $vmx = $suggestedVMX
+        } else {
+            $vmx = $inputVMX.Trim('"')
+        }
+    } else {
+        $vmx = (Read-Host " [*] Enter full path to your Kali .vmx file").Trim('"')
+    }
+
+    while (-not (Test-Path $vmx)) {
+        Write-Host " [!] File not found: '$vmx'" -ForegroundColor Red
+        $vmx = (Read-Host " [*] Enter full path to your Kali .vmx file").Trim('"')
+    }
 }
 
+# Prompt for Username if not set
+if (-not $user) {
+    Write-Host ""
+    $user = Read-Host " [?] Enter Kali Linux Username (default: kali)"
+    if ([string]::IsNullOrWhiteSpace($user)) { $user = "kali" }
+}
+
+# Prompt for Password if not set
+if (-not $pass) {
+    $pass = Read-Host " [?] Enter Kali Linux Password" -MaskInput
+    if ([string]::IsNullOrWhiteSpace($pass)) { $pass = "kali" }
+}
+
+# Ask to save configuration
+if ($configData.guest_username -match "your_username" -or (-not (Test-Path $configFile))) {
+    Write-Host ""
+    $saveChoice = Read-Host " [?] Save these settings to config.json for next time? (Y/n)"
+    if ($saveChoice -ne "n" -and $saveChoice -ne "N") {
+        $newConfig = [PSCustomObject]@{
+            vmx_path       = $vmx
+            vmware_path    = $vmrun
+            guest_username = $user
+            guest_password = $pass
+            fallback_ip    = $fallbackIP
+            auto_start_vm  = $true
+            ssh_port       = 22
+        }
+        $newConfig | ConvertTo-Json -Depth 4 | Set-Content $configFile -Encoding UTF8
+        Write-Host " [+] Configuration saved to config.json." -ForegroundColor Green
+    }
+}
+
+Write-Host ""
 Write-Host " [*] Checking Virtual Machine status..." -ForegroundColor Gray
 $runningVMs = & $vmrun list
 
@@ -67,7 +131,7 @@ if ($runningVMs -notmatch [regex]::Escape($vmx)) {
     Write-Host " [*] Waiting for Kali network services to start..." -ForegroundColor Gray
     Start-Sleep -Seconds 12
 } else {
-    Write-Host " [+] Kali Linux is active." -ForegroundColor Green
+    Write-Host " [+] Kali Linux is already running." -ForegroundColor Green
 }
 
 Write-Host " [*] Detecting Kali IP address..." -ForegroundColor Gray
